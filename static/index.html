@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Signal Forge</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+    <main class="shell">
+      <section class="hero">
+        <div class="hero-copy reveal">
+          <p class="eyebrow">Multi-agent investing workspace</p>
+          <h1>Debate a stock or crypto before you put capital at risk.</h1>
+          <p class="lede">
+            Search by ticker, company name, or token. Pull free market data,
+            score the setup over a quarter, six months, or a year, and let bull,
+            bear, and quant analysts argue the case.
+          </p>
+        </div>
+        <div class="hero-card reveal">
+          <div class="hero-card-row">
+            <span>Market data</span>
+            <strong>Yahoo Finance + CoinGecko</strong>
+          </div>
+          <div class="hero-card-row">
+            <span>Debate mode</span>
+            <strong id="llm-status">Checking...</strong>
+          </div>
+          <div class="hero-card-row">
+            <span>Horizon packs</span>
+            <strong>3M, 6M, 12M</strong>
+          </div>
+          <p class="hero-note">
+            Add <code>OPENAI_API_KEY</code> and <code>OPENAI_MODEL</code> in
+            <code>.env</code> to enable real LLM-backed analysts. Without them,
+            the app still runs with a rules-based debate panel.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel search-panel reveal">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Asset Research</p>
+            <h2>Run an analysis</h2>
+          </div>
+          <div class="search-head-actions">
+            <p class="microcopy">
+              Free data first, debate second. This is for research support only,
+              not personal financial advice.
+            </p>
+            <button id="home-button" class="ghost-button hidden" type="button">
+              Back to Home
+            </button>
+          </div>
+        </div>
+
+        <form id="analysis-form" class="analysis-form">
+          <div class="field field-query">
+            <label for="query">Ticker, company, or coin</label>
+            <input
+              id="query"
+              name="query"
+              type="text"
+              placeholder="Try NVDA, Microsoft, BTC, or Solana"
+              autocomplete="off"
+            />
+            <div id="lookup-menu" class="lookup-menu hidden"></div>
+          </div>
+
+          <div class="field">
+            <label for="asset-type">Asset type</label>
+            <select id="asset-type" name="assetType">
+              <option value="auto">Auto-detect</option>
+              <option value="stock">Stock / ETF</option>
+              <option value="crypto">Crypto</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="horizon">Holding period</label>
+            <select id="horizon" name="horizon">
+              <option value="quarter">Quarter</option>
+              <option value="six_months">Six Months</option>
+              <option value="year">One Year</option>
+            </select>
+          </div>
+
+          <button id="analyze-button" class="primary-button" type="submit">
+            Run Debate
+          </button>
+        </form>
+      </section>
+
+      <section id="analysis-results" class="results hidden">
+        <div class="results-grid">
+          <article class="panel asset-panel reveal">
+            <div class="asset-head">
+              <div>
+                <p id="asset-badge" class="badge"></p>
+                <h2 id="asset-title">Asset</h2>
+                <p id="asset-summary" class="asset-summary"></p>
+              </div>
+              <div class="headline-metric">
+                <span>Current price</span>
+                <strong id="asset-price">-</strong>
+              </div>
+            </div>
+
+            <div id="metric-strip" class="metric-strip"></div>
+
+            <div class="chart-shell">
+              <div class="chart-head">
+                <span>Trailing price history</span>
+                <span id="chart-change"></span>
+              </div>
+              <svg id="price-chart" viewBox="0 0 640 260" preserveAspectRatio="none"></svg>
+            </div>
+
+            <div class="scorecard-grid">
+              <div class="scorecard-main">
+                <p class="scorecard-label">Horizon verdict</p>
+                <div class="scorecard-score">
+                  <strong id="verdict-score">0</strong>
+                  <span>/ 100</span>
+                </div>
+                <h3 id="verdict-title">Mixed</h3>
+                <p id="verdict-summary"></p>
+              </div>
+              <div class="scorecard-side">
+                <h3>What helps</h3>
+                <ul id="positive-list" class="compact-list"></ul>
+              </div>
+              <div class="scorecard-side">
+                <h3>What to watch</h3>
+                <ul id="risk-list" class="compact-list"></ul>
+              </div>
+            </div>
+
+            <div class="explanation-grid">
+              <div class="explanation-card">
+                <h3 id="recommendation-headline">Why this is recommended</h3>
+                <p id="recommendation-fit" class="asset-summary"></p>
+                <p id="timeframe-reason" class="microcopy"></p>
+              </div>
+              <div class="explanation-card">
+                <h3>Key drivers</h3>
+                <ul id="driver-list" class="compact-list"></ul>
+              </div>
+              <div class="explanation-card">
+                <h3>What could change the call</h3>
+                <ul id="watch-list" class="compact-list"></ul>
+              </div>
+            </div>
+
+            <div class="score-breakdown-card">
+              <div class="section-head section-head-tight">
+                <div>
+                  <p class="section-kicker">Score Reasoning</p>
+                  <h3>How the score was calculated</h3>
+                </div>
+                <p id="score-method" class="microcopy"></p>
+              </div>
+              <div id="score-breakdown-list" class="score-breakdown-list"></div>
+            </div>
+          </article>
+
+          <article class="panel debate-panel reveal">
+            <div class="section-head section-head-tight">
+              <div>
+                <p class="section-kicker">Analyst Panel</p>
+                <h2>Debate transcript</h2>
+              </div>
+              <p id="debate-mode" class="microcopy"></p>
+            </div>
+
+            <div id="debate-cards" class="debate-cards"></div>
+
+            <div class="moderator-card">
+              <div class="moderator-head">
+                <span>Moderator decision</span>
+                <strong id="moderator-stance"></strong>
+              </div>
+              <p id="moderator-summary"></p>
+              <p id="moderator-decision" class="decision-callout"></p>
+              <ul id="moderator-points" class="compact-list"></ul>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel suggestions-panel reveal">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Idea Engine</p>
+            <h2>Suggested opportunities</h2>
+          </div>
+          <div class="segmented">
+            <button class="segment is-active" data-suggestion-type="stocks" type="button">
+              Stocks
+            </button>
+            <button class="segment" data-suggestion-type="crypto" type="button">
+              Crypto
+            </button>
+          </div>
+        </div>
+
+        <p id="suggestions-state" class="microcopy">Loading ranked ideas...</p>
+        <div id="suggestions-columns" class="suggestions-columns"></div>
+        <div class="suggestions-actions">
+          <button id="more-suggestions-button" class="ghost-button" type="button">
+            Show More Ideas
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <template id="suggestion-card-template">
+      <article class="suggestion-card">
+        <div class="suggestion-card-head">
+          <div>
+            <p class="suggestion-symbol"></p>
+            <h3 class="suggestion-name"></h3>
+          </div>
+          <div class="suggestion-score"></div>
+        </div>
+        <p class="suggestion-summary"></p>
+        <p class="suggestion-price"></p>
+        <ul class="compact-list suggestion-points"></ul>
+      </article>
+    </template>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

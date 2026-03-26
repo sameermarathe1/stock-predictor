@@ -1,0 +1,3 @@
+# This project currently uses only Python's standard library.
+# The file is still included so setup can consistently use:
+#   python -m pip install -r requirements.txt
