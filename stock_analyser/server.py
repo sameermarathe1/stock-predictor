@@ -36,6 +36,9 @@ class AppState:
         return {
             "status": "ok",
             "llmEnabled": self.settings.llm_enabled,
+            "counselAvailable": self.settings.counsel_enabled,
+            "counselMaxMembers": self.settings.counsel_member_limit(),
+            "counselModels": list(self.settings.counsel_models),
         }
 
     def lookup(self, query: str, asset_type: str) -> dict[str, Any]:
@@ -51,13 +54,21 @@ class AppState:
         asset_type = payload.get("assetType") or "auto"
         identifier = payload.get("identifier")
         horizon = payload.get("horizon") or "quarter"
+        counsel_enabled = bool(payload.get("aiCounselEnabled"))
+        counsel_members = int(payload.get("counselMembers") or 3)
 
         snapshot = self.market_data.resolve_and_fetch(
             query=query, asset_type=asset_type, identifier=identifier
         )
         scored = build_scorecard(snapshot, horizon)
         enriched_snapshot = scored["snapshot"]
-        debate = self.debate.debate(enriched_snapshot, horizon, scored["scorecard"])
+        debate = self.debate.debate(
+            enriched_snapshot,
+            horizon,
+            scored["scorecard"],
+            counsel_enabled=counsel_enabled,
+            counsel_members=counsel_members,
+        )
         recommendation = build_recommendation_analysis(
             enriched_snapshot, horizon, scored["scorecard"]
         )

@@ -1,6 +1,12 @@
 const state = {
   lookupTimer: null,
   selectedLookup: null,
+  health: {
+    llmEnabled: false,
+    counselAvailable: false,
+    counselMaxMembers: 5,
+    counselModels: [],
+  },
   suggestions: {
     stocks: null,
     crypto: null,
@@ -17,10 +23,15 @@ const elements = {
   query: document.querySelector("#query"),
   assetType: document.querySelector("#asset-type"),
   horizon: document.querySelector("#horizon"),
+  aiCounselEnabled: document.querySelector("#ai-counsel-enabled"),
+  counselMembers: document.querySelector("#counsel-members"),
+  counselMembersField: document.querySelector("#counsel-members-field"),
+  counselStatus: document.querySelector("#counsel-status"),
   lookupMenu: document.querySelector("#lookup-menu"),
   analyzeButton: document.querySelector("#analyze-button"),
   homeButton: document.querySelector("#home-button"),
   results: document.querySelector("#analysis-results"),
+  analysisWarning: document.querySelector("#analysis-warning"),
   llmStatus: document.querySelector("#llm-status"),
   assetBadge: document.querySelector("#asset-badge"),
   assetTitle: document.querySelector("#asset-title"),
@@ -47,6 +58,19 @@ const elements = {
   moderatorSummary: document.querySelector("#moderator-summary"),
   moderatorDecision: document.querySelector("#moderator-decision"),
   moderatorPoints: document.querySelector("#moderator-points"),
+  counselVerdictShell: document.querySelector("#counsel-verdict-shell"),
+  counselInvestable: document.querySelector("#counsel-investable"),
+  counselTradeType: document.querySelector("#counsel-trade-type"),
+  counselConfidence: document.querySelector("#counsel-confidence"),
+  counselEntryPlan: document.querySelector("#counsel-entry-plan"),
+  counselExitPlan: document.querySelector("#counsel-exit-plan"),
+  counselOptionsIdea: document.querySelector("#counsel-options-idea"),
+  counselRiskFlags: document.querySelector("#counsel-risk-flags"),
+  counselModelsUsed: document.querySelector("#counsel-models-used"),
+  counselSources: document.querySelector("#counsel-sources"),
+  counselTranscriptShell: document.querySelector("#counsel-transcript-shell"),
+  counselMembersUsed: document.querySelector("#counsel-members-used"),
+  counselTranscript: document.querySelector("#counsel-transcript"),
   suggestionsState: document.querySelector("#suggestions-state"),
   suggestionsColumns: document.querySelector("#suggestions-columns"),
   moreSuggestionsButton: document.querySelector("#more-suggestions-button"),
@@ -56,6 +80,8 @@ const elements = {
 
 document.addEventListener("DOMContentLoaded", () => {
   wireEvents();
+  populateCounselMembers(state.health.counselMaxMembers);
+  syncCounselControls();
   loadHealth();
   loadSuggestions();
 });
@@ -68,6 +94,8 @@ function wireEvents() {
   elements.form.addEventListener("submit", onSubmit);
   elements.homeButton.addEventListener("click", resetHomepage);
   elements.moreSuggestionsButton.addEventListener("click", onShowMoreSuggestions);
+  elements.aiCounselEnabled.addEventListener("change", onCounselToggle);
+  elements.counselMembers.addEventListener("change", syncAnalyzeButtonLabel);
 
   document.addEventListener("pointerdown", (event) => {
     if (!elements.lookupMenu.contains(event.target) && event.target !== elements.query) {
@@ -90,9 +118,79 @@ async function loadHealth() {
   try {
     const response = await fetch("/api/health");
     const payload = await response.json();
-    elements.llmStatus.textContent = payload.llmEnabled ? "OpenAI-enabled" : "Rules-based";
+    state.health = {
+      llmEnabled: Boolean(payload.llmEnabled),
+      counselAvailable: Boolean(payload.counselAvailable),
+      counselMaxMembers: Number(payload.counselMaxMembers) || 5,
+      counselModels: Array.isArray(payload.counselModels) ? payload.counselModels : [],
+    };
+
+    if (state.health.counselAvailable) {
+      elements.llmStatus.textContent = "OpenAI debate + AI counsel ready";
+    } else if (state.health.llmEnabled) {
+      elements.llmStatus.textContent = "OpenAI debate enabled";
+    } else {
+      elements.llmStatus.textContent = "Rules-based";
+    }
   } catch {
     elements.llmStatus.textContent = "Unavailable";
+  }
+
+  populateCounselMembers(state.health.counselMaxMembers);
+  syncCounselControls();
+}
+
+function populateCounselMembers(maxMembers) {
+  const limit = Math.max(2, Math.min(maxMembers || 5, 5));
+  const currentValue = Number(elements.counselMembers.value) || 3;
+  elements.counselMembers.innerHTML = "";
+  for (let count = 2; count <= limit; count += 1) {
+    const option = document.createElement("option");
+    option.value = String(count);
+    option.textContent = `${count} agents`;
+    elements.counselMembers.appendChild(option);
+  }
+  const safeValue = Math.max(2, Math.min(currentValue, limit));
+  elements.counselMembers.value = String(safeValue);
+}
+
+function syncCounselControls() {
+  const available = state.health.counselAvailable;
+  elements.aiCounselEnabled.disabled = !available;
+
+  if (!available) {
+    elements.aiCounselEnabled.checked = false;
+    elements.counselMembersField.classList.add("hidden");
+    elements.counselStatus.textContent = state.health.llmEnabled
+      ? "AI counsel needs at least one model in OPENAI_COUNSEL_MODELS."
+      : "Add OPENAI_API_KEY plus OPENAI_MODEL or OPENAI_COUNSEL_MODELS to unlock AI counsel.";
+  } else if (elements.aiCounselEnabled.checked) {
+    const pool = state.health.counselModels.length
+      ? state.health.counselModels.join(", ")
+      : "your configured default model";
+    elements.counselMembersField.classList.remove("hidden");
+    elements.counselStatus.textContent = `Counsel will randomly draw from: ${pool}.`;
+  } else {
+    elements.counselMembersField.classList.add("hidden");
+    elements.counselStatus.textContent = "Disabled by default because each run launches multiple web-enabled agents.";
+  }
+
+  syncAnalyzeButtonLabel();
+}
+
+function syncAnalyzeButtonLabel() {
+  if (elements.aiCounselEnabled.checked && !elements.aiCounselEnabled.disabled) {
+    const members = elements.counselMembers.value || "3";
+    elements.analyzeButton.textContent = `Run AI Counsel (${members})`;
+    return;
+  }
+  elements.analyzeButton.textContent = "Run Debate";
+}
+
+function onCounselToggle() {
+  syncCounselControls();
+  if (elements.aiCounselEnabled.checked && !elements.aiCounselEnabled.disabled) {
+    elements.counselMembers.focus();
   }
 }
 
@@ -157,6 +255,11 @@ function resetHomepage() {
   elements.form.reset();
   elements.assetType.value = "auto";
   elements.horizon.value = "quarter";
+  elements.aiCounselEnabled.checked = false;
+  populateCounselMembers(state.health.counselMaxMembers);
+  syncCounselControls();
+  elements.analysisWarning.classList.add("hidden");
+  elements.analysisWarning.textContent = "";
   elements.results.classList.add("hidden");
   elements.homeButton.classList.add("hidden");
   hideLookupMenu();
@@ -171,17 +274,24 @@ async function onSubmit(event) {
     return;
   }
 
-  await runAnalysis({
+  await runAnalysis(buildAnalysisPayload(query));
+}
+
+function buildAnalysisPayload(query) {
+  const counselEnabled = elements.aiCounselEnabled.checked && !elements.aiCounselEnabled.disabled;
+  return {
     query,
     assetType: state.selectedLookup ? state.selectedLookup.assetType : elements.assetType.value,
     identifier: state.selectedLookup ? state.selectedLookup.identifier : null,
     horizon: elements.horizon.value,
-  });
+    aiCounselEnabled: counselEnabled,
+    counselMembers: counselEnabled ? Number(elements.counselMembers.value || 3) : 0,
+  };
 }
 
 async function runAnalysis(payload) {
   elements.analyzeButton.disabled = true;
-  elements.analyzeButton.textContent = "Running...";
+  elements.analyzeButton.textContent = payload.aiCounselEnabled ? "Launching council..." : "Running...";
 
   try {
     const response = await fetch("/api/analyze", {
@@ -198,7 +308,7 @@ async function runAnalysis(payload) {
     window.alert(error.message);
   } finally {
     elements.analyzeButton.disabled = false;
-    elements.analyzeButton.textContent = "Run Debate";
+    syncAnalyzeButtonLabel();
   }
 }
 
@@ -207,9 +317,18 @@ function renderAnalysis(data) {
   elements.results.classList.remove("hidden");
   elements.homeButton.classList.remove("hidden");
 
+  if (debate.warning) {
+    elements.analysisWarning.textContent = debate.warning;
+    elements.analysisWarning.classList.remove("hidden");
+  } else {
+    elements.analysisWarning.textContent = "";
+    elements.analysisWarning.classList.add("hidden");
+  }
+
   elements.assetBadge.textContent = `${asset.assetType.toUpperCase()} • ${asset.symbol}`;
   elements.assetTitle.textContent = asset.name;
-  elements.assetSummary.textContent = asset.summary || "No business summary was available from the free data source.";
+  elements.assetSummary.textContent =
+    asset.summary || "No business summary was available from the free data source.";
   elements.assetPrice.textContent = formatCurrency(asset.currentPrice, asset.currency || "USD");
 
   const metricMap = buildMetricMap(asset, scorecard);
@@ -234,15 +353,28 @@ function renderAnalysis(data) {
   elements.scoreMethod.textContent = recommendation.scoreMethod || "";
   renderScoreBreakdown(recommendation.scoreBreakdown || []);
 
-  elements.debateMode.textContent = `Debate mode: ${debate.mode === "llm" ? "LLM-backed agents" : "Rules-based analysts"}`;
+  elements.debateMode.textContent = buildDebateModeLabel(debate);
   renderDebateCards(debate.analysts || []);
-  elements.moderatorStance.textContent = debate.moderator?.stance || "-";
-  elements.moderatorSummary.textContent = debate.moderator?.summary || "";
-  elements.moderatorDecision.textContent = debate.moderator?.decision || "";
-  renderList(elements.moderatorPoints, debate.moderator?.keyTakeaways || []);
+  const moderator = debate.moderator || {};
+  elements.moderatorStance.textContent = moderator.stance || "-";
+  elements.moderatorSummary.textContent = moderator.summary || "";
+  elements.moderatorDecision.textContent = moderator.decision || "";
+  renderList(elements.moderatorPoints, moderator.keyTakeaways || []);
 
+  renderCounsel(debate.counsel || null);
   renderChart(history || [], asset.currentPrice, asset.currency || "USD");
   elements.results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function buildDebateModeLabel(debate) {
+  if (debate.mode === "counsel") {
+    const members = (debate.counsel || {}).memberCount || 0;
+    return `Debate mode: AI counsel with ${members} web-enabled agents`;
+  }
+  if (debate.mode === "llm") {
+    return "Debate mode: LLM-backed agents";
+  }
+  return "Debate mode: Rules-based analysts";
 }
 
 function renderScoreBreakdown(items) {
@@ -364,20 +496,211 @@ function renderDebateCards(analysts) {
   analysts.forEach((analyst) => {
     const card = document.createElement("article");
     card.className = "debate-card";
-    card.dataset.tone = toneForAnalyst(analyst.name);
+    card.dataset.tone = toneForAnalyst(analyst.name, analyst.specialty);
+
+    const metaBits = [];
+    if (analyst.specialty) {
+      metaBits.push(analyst.specialty);
+    }
+    if (analyst.model) {
+      metaBits.push(analyst.model);
+    }
+
+    const planBits = [analyst.entryPlan, analyst.exitPlan, analyst.optionsIdea]
+      .filter((item) => item && item.trim())
+      .slice(0, 2);
+
     card.innerHTML = `
       <div class="debate-card-head">
         <div>
           <h3>${escapeHtml(analyst.name)}</h3>
           <p class="conviction">Conviction ${escapeHtml(String(analyst.conviction || "-"))}/100</p>
+          ${metaBits.length ? `<p class="panel-meta">${escapeHtml(metaBits.join(" • "))}</p>` : ""}
         </div>
         <span class="stance-pill">${escapeHtml(analyst.stance || "View")}</span>
       </div>
       <p class="debate-copy">${escapeHtml(analyst.summary || "")}</p>
-      <ul class="compact-list">${renderItems(analyst.evidence || [])}</ul>
+      <ul class="compact-list">${renderItems([...(analyst.evidence || []).slice(0, 2), ...planBits])}</ul>
     `;
     elements.debateCards.appendChild(card);
   });
+}
+
+function renderCounsel(counsel) {
+  if (!counsel) {
+    elements.counselVerdictShell.classList.add("hidden");
+    elements.counselTranscriptShell.classList.add("hidden");
+    return;
+  }
+
+  elements.counselVerdictShell.classList.remove("hidden");
+  elements.counselTranscriptShell.classList.remove("hidden");
+
+  const verdict = counsel.verdict || {};
+  elements.counselInvestable.textContent = verdict.investable || "Watchlist";
+  elements.counselTradeType.textContent = verdict.tradeType || "No Trade";
+  elements.counselConfidence.textContent = `${Number(verdict.confidence || 0)}/100`;
+  elements.counselEntryPlan.textContent = verdict.entryPlan || "No entry plan was produced.";
+  elements.counselExitPlan.textContent = verdict.exitPlan || "No exit plan was produced.";
+  elements.counselOptionsIdea.textContent =
+    verdict.optionsIdea || "No options trade was favored over the underlying.";
+  elements.counselModelsUsed.textContent = (counsel.modelsUsed || []).join(", ") || "Default model";
+  renderList(elements.counselRiskFlags, verdict.riskFlags || []);
+  renderCitationLinks(elements.counselSources, verdict.citations || []);
+
+  const members = counsel.memberCount || 0;
+  elements.counselMembersUsed.textContent = `${members} agents participated.`;
+  renderTranscript(counsel.transcript || []);
+}
+
+function renderTranscript(entries) {
+  elements.counselTranscript.innerHTML = "";
+  if (!entries.length) {
+    const empty = document.createElement("p");
+    empty.className = "microcopy";
+    empty.textContent = "No transcript was captured for this run.";
+    elements.counselTranscript.appendChild(empty);
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const card = document.createElement("article");
+    card.className = "transcript-card";
+
+    const header = document.createElement("div");
+    header.className = "transcript-head";
+
+    const title = document.createElement("div");
+    const heading = document.createElement("h3");
+    heading.textContent = entry.speaker || "Agent";
+    const meta = document.createElement("p");
+    meta.className = "panel-meta";
+    meta.textContent = [entry.role, entry.model, entry.round].filter(Boolean).join(" • ");
+    title.appendChild(heading);
+    if (meta.textContent) {
+      title.appendChild(meta);
+    }
+
+    const stance = document.createElement("span");
+    stance.className = "stance-pill";
+    stance.textContent = entry.stance || "View";
+    header.appendChild(title);
+    header.appendChild(stance);
+
+    const message = document.createElement("p");
+    message.className = "debate-copy";
+    message.textContent = entry.message || "";
+
+    card.appendChild(header);
+    card.appendChild(message);
+    appendCitationLinks(card, entry.citations || []);
+    elements.counselTranscript.appendChild(card);
+  });
+}
+
+function appendCitationLinks(parent, citations) {
+  if (!citations.length) {
+    return;
+  }
+  const shell = document.createElement("div");
+  shell.className = "citation-list";
+
+  citations.forEach((citation) => {
+    const link = document.createElement("a");
+    link.href = citation.url;
+    link.target = "_blank";
+    link.rel = "noreferrer noopener";
+    link.className = "citation-card";
+
+    const title = document.createElement("strong");
+    title.textContent = citationDisplayTitle(citation);
+
+    const meta = document.createElement("span");
+    meta.className = "citation-url";
+    meta.textContent = citationDisplayMeta(citation.url);
+
+    const footer = document.createElement("div");
+    footer.className = "citation-footer";
+
+    const ref = document.createElement("span");
+    ref.className = "citation-ref";
+    ref.textContent = "Reference link";
+
+    const open = document.createElement("span");
+    open.className = "citation-open";
+    open.textContent = "Open";
+
+    footer.appendChild(ref);
+    footer.appendChild(open);
+
+    link.appendChild(title);
+    link.appendChild(meta);
+    link.appendChild(footer);
+    shell.appendChild(link);
+  });
+
+  parent.appendChild(shell);
+}
+
+function renderCitationLinks(container, citations) {
+  container.innerHTML = "";
+  appendCitationLinks(container, citations);
+}
+
+function citationDisplayTitle(citation) {
+  const title = (citation.title || "").trim();
+  if (title && !looksLikeUrl(title)) {
+    return title;
+  }
+
+  const details = parsedUrlDetails(citation.url);
+  if (!details) {
+    return "Source";
+  }
+
+  const pathLabel = details.pathname
+    .split("/")
+    .filter(Boolean)
+    [0];
+
+  if (pathLabel) {
+    return `${details.hostname} / ${pathLabel}`;
+  }
+
+  return details.hostname;
+}
+
+function citationDisplayMeta(url) {
+  const details = parsedUrlDetails(url);
+  if (!details) {
+    return url || "";
+  }
+
+  const path = shortenText(details.pathname === "/" ? "" : details.pathname, 40);
+  return path ? `${details.hostname}${path}` : details.hostname;
+}
+
+function parsedUrlDetails(url) {
+  try {
+    const parsed = new URL(url);
+    return {
+      hostname: parsed.hostname.replace(/^www\./, ""),
+      pathname: parsed.pathname || "/",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function looksLikeUrl(value) {
+  return /^https?:\/\//i.test(value) || value.includes("www.");
+}
+
+function shortenText(value, maxLength) {
+  if (!value || value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, maxLength - 1)}…`;
 }
 
 function renderChart(history, currentPrice, currency) {
@@ -403,7 +726,8 @@ function renderChart(history, currentPrice, currency) {
   });
 
   const areaPoints = [`${padding},${height - padding}`, ...points, `${width - padding},${height - padding}`];
-  const change = ((usable.at(-1).close / usable[0].close) - 1) * 100;
+  const latestPoint = usable[usable.length - 1];
+  const change = ((latestPoint.close / usable[0].close) - 1) * 100;
   elements.chartChange.textContent = `${formatPercent(change)} over the displayed period`;
 
   elements.priceChart.innerHTML = `
@@ -511,12 +835,9 @@ async function openSuggestionAnalysis(idea, horizon) {
   elements.query.value = `${idea.name} (${idea.symbol})`;
   elements.assetType.value = assetType;
   elements.horizon.value = horizon;
-  await runAnalysis({
-    query: idea.symbol,
-    assetType,
-    identifier: idea.identifier,
-    horizon,
-  });
+  await runAnalysis(
+    buildAnalysisPayload(idea.symbol)
+  );
 }
 
 function renderList(element, items) {
@@ -530,12 +851,16 @@ function renderItems(items) {
   return items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
 }
 
-function toneForAnalyst(name) {
-  if (name.includes("Bull")) {
+function toneForAnalyst(name, specialty = "") {
+  const joined = `${name} ${specialty}`.toLowerCase();
+  if (joined.includes("bull") || joined.includes("fundamental")) {
     return "bull";
   }
-  if (name.includes("Bear")) {
+  if (joined.includes("bear") || joined.includes("risk")) {
     return "bear";
+  }
+  if (joined.includes("option")) {
+    return "navy";
   }
   return "quant";
 }

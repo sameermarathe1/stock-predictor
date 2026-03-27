@@ -197,6 +197,18 @@ h3 {
   align-items: end;
 }
 
+.counsel-toggle-field {
+  grid-column: 1 / span 2;
+}
+
+#counsel-members-field {
+  grid-column: 3;
+}
+
+#analyze-button {
+  align-self: stretch;
+}
+
 .field {
   position: relative;
 }
@@ -212,7 +224,7 @@ h3 {
   color: var(--muted);
 }
 
-input,
+input:not([type="checkbox"]),
 select {
   width: 100%;
   border: 1px solid rgba(24, 22, 18, 0.16);
@@ -224,7 +236,7 @@ select {
   transition: border-color 140ms ease, transform 140ms ease;
 }
 
-input:focus,
+input:not([type="checkbox"]):focus,
 select:focus {
   border-color: var(--teal);
   transform: translateY(-1px);
@@ -235,6 +247,12 @@ select:focus {
 .ghost-button {
   border: 0;
   cursor: pointer;
+}
+
+.primary-button:disabled,
+.ghost-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .primary-button {
@@ -253,6 +271,127 @@ select:focus {
   background: rgba(24, 22, 18, 0.07);
   color: var(--ink);
   white-space: nowrap;
+}
+
+.toggle-control input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.counsel-setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.counsel-callout {
+  min-width: 0;
+  padding: 0.95rem 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(24, 22, 18, 0.1);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.toggle-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.25rem;
+}
+
+.toggle-title {
+  display: block;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.toggle-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(188, 93, 49, 0.1);
+  color: var(--rust);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.toggle-control {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 84px;
+  padding: 0.85rem;
+  border-radius: 18px;
+  border: 1px solid rgba(24, 22, 18, 0.08);
+  background: rgba(255, 255, 255, 0.52);
+  cursor: pointer;
+  transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.toggle-control:hover {
+  border-color: rgba(24, 22, 18, 0.16);
+  box-shadow: 0 12px 24px rgba(35, 27, 13, 0.05);
+}
+
+.toggle-control:focus-within {
+  border-color: rgba(24, 22, 18, 0.22);
+  box-shadow: 0 0 0 3px rgba(24, 22, 18, 0.06);
+}
+
+.toggle-switch {
+  position: relative;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(24, 22, 18, 0.12);
+  background: rgba(255, 255, 255, 0.96);
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.toggle-switch::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #d6d0c5;
+  box-shadow: 0 3px 10px rgba(24, 22, 18, 0.12);
+  transition: transform 140ms ease;
+}
+
+.toggle-control input:checked + .toggle-switch {
+  border-color: rgba(24, 22, 18, 0.16);
+  background: rgba(229, 225, 219, 0.98);
+}
+
+.toggle-control input:checked + .toggle-switch::after {
+  transform: translateX(24px);
+  background: #ffffff;
+}
+
+.toggle-control input:disabled + .toggle-switch {
+  border-color: rgba(24, 22, 18, 0.08);
+  background: rgba(249, 247, 243, 0.9);
+}
+
+.toggle-control input:disabled + .toggle-switch::after {
+  background: #e7e1d8;
+}
+
+#counsel-status {
+  margin: 0;
 }
 
 .search-panel {
@@ -311,6 +450,14 @@ select:focus {
 
 .results {
   margin-top: 1.5rem;
+}
+
+.warning-banner {
+  margin-bottom: 1rem;
+  padding: 1rem 1.2rem;
+  color: var(--rust);
+  background: rgba(188, 93, 49, 0.08);
+  border: 1px solid rgba(188, 93, 49, 0.16);
 }
 
 .results-grid {
@@ -464,7 +611,9 @@ select:focus {
 .scorecard-side,
 .explanation-card,
 .moderator-card,
-.debate-card {
+.debate-card,
+.transcript-card,
+.verdict-tile {
   border-radius: 24px;
   padding: 1.2rem;
   background: rgba(255, 255, 255, 0.58);
@@ -521,6 +670,10 @@ select:focus {
   background: linear-gradient(135deg, rgba(35, 66, 94, 0.12), rgba(255, 255, 255, 0.62));
 }
 
+.debate-card[data-tone="navy"] {
+  background: linear-gradient(135deg, rgba(35, 66, 94, 0.16), rgba(255, 255, 255, 0.62));
+}
+
 .debate-card-head,
 .moderator-head,
 .suggestion-card-head {
@@ -542,6 +695,127 @@ select:focus {
 .conviction {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.panel-meta {
+  margin: 0.28rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.counsel-verdict-shell,
+.counsel-transcript-shell {
+  margin-top: 1rem;
+}
+
+.counsel-verdict-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.verdict-tile span {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.verdict-tile strong {
+  font-size: 1.15rem;
+}
+
+.counsel-plan-grid,
+.counsel-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.85rem;
+}
+
+.counsel-transcript {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.transcript-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 0.7rem;
+}
+
+.citation-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.citation-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 16px;
+  background: rgba(13, 116, 103, 0.08);
+  color: var(--teal);
+  text-decoration: none;
+  font-size: 0.82rem;
+  border: 1px solid rgba(13, 116, 103, 0.1);
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.citation-card:hover {
+  background: rgba(13, 116, 103, 0.12);
+  border-color: rgba(13, 116, 103, 0.18);
+  transform: translateY(-1px);
+}
+
+.citation-card strong,
+.citation-card span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.citation-card strong {
+  color: var(--ink);
+  margin-bottom: 0.22rem;
+  line-height: 1.35;
+}
+
+.citation-card span {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.citation-url {
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
+.citation-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(13, 116, 103, 0.08);
+  font-size: 0.76rem;
+}
+
+.citation-ref {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.citation-open {
+  color: var(--teal);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
 }
 
 .suggestions-panel {
@@ -635,12 +909,20 @@ code {
   .results-grid,
   .suggestions-columns,
   .hero,
-  .explanation-grid {
+  .explanation-grid,
+  .counsel-plan-grid,
+  .counsel-meta-grid,
+  .counsel-verdict-grid {
     grid-template-columns: 1fr;
   }
 
   .scorecard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .counsel-toggle-field,
+  #counsel-members-field {
+    grid-column: auto;
   }
 }
 
@@ -671,5 +953,17 @@ code {
 
   .score-breakdown-meta {
     text-align: left;
+  }
+
+  .counsel-setting {
+    grid-template-columns: 1fr;
+  }
+
+  .toggle-control {
+    justify-self: start;
+  }
+
+  .transcript-head {
+    flex-direction: column;
   }
 }

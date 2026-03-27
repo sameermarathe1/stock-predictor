@@ -30,13 +30,16 @@
             <strong id="llm-status">Checking...</strong>
           </div>
           <div class="hero-card-row">
-            <span>Horizon packs</span>
-            <strong>3M, 6M, 12M</strong>
+            <span>AI counsel</span>
+            <strong>2 to 5 agents</strong>
           </div>
           <p class="hero-note">
             Add <code>OPENAI_API_KEY</code> and <code>OPENAI_MODEL</code> in
-            <code>.env</code> to enable real LLM-backed analysts. Without them,
-            the app still runs with a rules-based debate panel.
+            <code>.env</code> to enable real LLM-backed analysts. Add
+            <code>OPENAI_COUNSEL_MODELS</code> to let counsel randomly draw
+            different models from a shared pool
+            the optional web-enabled AI counsel. Without them, the app still
+            runs with a rules-based debate panel.
           </p>
         </div>
       </section>
@@ -89,6 +92,34 @@
             </select>
           </div>
 
+          <div class="field counsel-toggle-field">
+            <div class="counsel-setting">
+              <div class="counsel-callout">
+                <div class="toggle-head">
+                  <span class="toggle-title">AI counsel</span>
+                  <span class="toggle-badge">Resource intensive</span>
+                </div>
+                <p id="counsel-status" class="microcopy">
+                  Disabled by default because each run launches multiple web-enabled agents.
+                </p>
+              </div>
+              <label class="toggle-control" for="ai-counsel-enabled">
+                <input id="ai-counsel-enabled" name="aiCounselEnabled" type="checkbox" />
+                <span class="toggle-switch" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <div id="counsel-members-field" class="field hidden">
+            <label for="counsel-members">AI counsel members</label>
+            <select id="counsel-members" name="counselMembers">
+              <option value="2">2 agents</option>
+              <option value="3" selected>3 agents</option>
+              <option value="4">4 agents</option>
+              <option value="5">5 agents</option>
+            </select>
+          </div>
+
           <button id="analyze-button" class="primary-button" type="submit">
             Run Debate
           </button>
@@ -96,6 +127,7 @@
       </section>
 
       <section id="analysis-results" class="results hidden">
+        <div id="analysis-warning" class="panel warning-banner hidden"></div>
         <div class="results-grid">
           <article class="panel asset-panel reveal">
             <div class="asset-head">
@@ -187,6 +219,71 @@
               <p id="moderator-summary"></p>
               <p id="moderator-decision" class="decision-callout"></p>
               <ul id="moderator-points" class="compact-list"></ul>
+            </div>
+
+            <div id="counsel-verdict-shell" class="counsel-verdict-shell hidden">
+              <div class="section-head section-head-tight">
+                <div>
+                  <p class="section-kicker">Concrete Verdict</p>
+                  <h3>AI counsel action plan</h3>
+                </div>
+                <p id="counsel-members-used" class="microcopy"></p>
+              </div>
+
+              <div class="counsel-verdict-grid">
+                <article class="verdict-tile">
+                  <span>Investible?</span>
+                  <strong id="counsel-investable">-</strong>
+                </article>
+                <article class="verdict-tile">
+                  <span>Preferred trade</span>
+                  <strong id="counsel-trade-type">-</strong>
+                </article>
+                <article class="verdict-tile">
+                  <span>Confidence</span>
+                  <strong id="counsel-confidence">-</strong>
+                </article>
+              </div>
+
+              <div class="counsel-plan-grid">
+                <div class="explanation-card">
+                  <h3>Entry framing</h3>
+                  <p id="counsel-entry-plan" class="asset-summary"></p>
+                </div>
+                <div class="explanation-card">
+                  <h3>Exit plan</h3>
+                  <p id="counsel-exit-plan" class="asset-summary"></p>
+                </div>
+                <div class="explanation-card">
+                  <h3>Options angle</h3>
+                  <p id="counsel-options-idea" class="asset-summary"></p>
+                </div>
+              </div>
+
+              <div class="counsel-meta-grid">
+                <div class="explanation-card">
+                  <h3>Risk flags</h3>
+                  <ul id="counsel-risk-flags" class="compact-list"></ul>
+                </div>
+                <div class="explanation-card">
+                  <h3>Models used</h3>
+                  <p id="counsel-models-used" class="asset-summary"></p>
+                </div>
+                <div class="explanation-card">
+                  <h3>Sources</h3>
+                  <div id="counsel-sources"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="counsel-transcript-shell" class="counsel-transcript-shell hidden">
+              <div class="section-head section-head-tight">
+                <div>
+                  <p class="section-kicker">Counsel Room</p>
+                  <h3>Agent discussion log</h3>
+                </div>
+              </div>
+              <div id="counsel-transcript" class="counsel-transcript"></div>
             </div>
           </article>
         </div>
